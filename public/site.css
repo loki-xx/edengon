@@ -1,0 +1,93 @@
+/* えでんごん サイト共通スタイル（トップ・規約ページ） */
+:root {
+  --desk: #24485A;
+  --desk-deep: #1A3644;
+  --paper: #FFFFFF;
+  --ink: #222222;
+  --pencil: #F6C343;
+  --pencil-edge: #D9A520;
+  --eraser: #F28B9B;
+  --soft: #CFE0E8;
+  --line-green: #06C755;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--desk);
+  color: var(--paper);
+  font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  font-weight: 500;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+a { color: var(--pencil); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--eraser); outline-offset: 3px; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+
+/* ヒーロー */
+.hero { padding: 28px 0 8px; }
+.hero img { width: 100%; height: auto; }
+.lead { text-align: center; font-size: 17px; margin: 8px 0 28px; color: var(--soft); }
+.cta {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: min(100%, 360px); margin: 0 auto; min-height: 60px; padding: 0 24px;
+  background: var(--line-green); color: #fff; text-decoration: none;
+  font-size: 19px; font-weight: 900; border-radius: 16px; box-shadow: 0 5px 0 #04913E;
+}
+.cta:active { transform: translateY(3px); box-shadow: 0 2px 0 #04913E; }
+.cta-note { text-align: center; font-size: 13px; color: var(--soft); margin: 14px 0 0; }
+
+/* セクション */
+section { padding: 56px 0 8px; }
+h2 { font-size: 24px; font-weight: 900; margin: 0 0 22px; line-height: 1.4; }
+h2 .mark { color: var(--pencil); }
+
+/* 遊び方：伝言のように矢印でつながる紙 */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 34px; counter-reset: step; }
+.steps li {
+  position: relative; background: var(--paper); color: var(--ink);
+  border-radius: 4px; padding: 18px 20px 18px 64px; box-shadow: 0 6px 0 var(--desk-deep);
+}
+.steps li::before {
+  counter-increment: step; content: counter(step);
+  position: absolute; left: 18px; top: 16px; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--pencil); color: var(--ink); font-weight: 900; display: grid; place-items: center;
+}
+.steps li + li::after {
+  content: "↓"; position: absolute; top: -32px; left: 50%; transform: translateX(-50%);
+  color: var(--soft); font-size: 20px;
+}
+.steps b { display: block; font-size: 17px; }
+.steps span { font-size: 14px; color: #555; }
+
+/* ことば一覧 */
+.words { width: 100%; border-collapse: collapse; font-size: 15px; }
+.words th, .words td { text-align: left; padding: 12px 8px; border-bottom: 1px solid rgba(207, 224, 232, .25); vertical-align: top; }
+.words th { white-space: nowrap; color: var(--pencil); font-weight: 900; width: 7em; }
+.words code { font-family: inherit; }
+
+/* 小さな特徴 */
+.points { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.point { border: 2px dashed rgba(207, 224, 232, .45); border-radius: 14px; padding: 16px 18px; }
+.point b { display: block; color: var(--pencil); font-size: 16px; margin-bottom: 4px; }
+.point span { font-size: 14px; color: var(--soft); }
+
+/* 規約ページ */
+.doc { background: var(--paper); color: var(--ink); border-radius: 4px; padding: 28px 22px 32px; margin: 24px 0 40px; box-shadow: 0 6px 0 var(--desk-deep); }
+.doc h1 { font-size: 24px; font-weight: 900; margin: 0 0 6px; line-height: 1.4; }
+.doc .date { font-size: 13px; color: #777; margin: 0 0 22px; }
+.doc h2 { font-size: 17px; margin: 28px 0 8px; }
+.doc p, .doc li { font-size: 15px; }
+.doc ol, .doc ul { padding-left: 1.4em; }
+.doc a { color: #2F6F8F; }
+.back { display: inline-block; margin-top: 24px; font-size: 14px; }
+.brand-small { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--paper); font-weight: 900; }
+.brand-small img { width: 40px; height: 40px; border-radius: 50%; }
+
+/* フッター */
+footer { margin-top: 64px; padding: 28px 0 calc(32px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(207, 224, 232, .25); font-size: 13px; color: var(--soft); }
+footer .row { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between; }
+footer nav { display: flex; gap: 18px; }
+footer a { color: var(--soft); }
