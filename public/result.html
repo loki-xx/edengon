@@ -57,7 +57,7 @@
     who.className = "who";
     if (c.type === "prompt") {
       li.className = "prompt";
-      who.textContent = "最初のお題";
+      who.textContent = c.name ? `${c.name}さんが書いたお題` : "最初のお題";
     } else {
       who.textContent = c.type === "draw" ? `${c.name}さんが描いた` : `${c.name}さんの答え`;
     }

@@ -77,6 +77,7 @@
   }
   .tool[aria-pressed="true"] { background: var(--paper); color: var(--desk); border-color: var(--paper); font-weight: 700; }
 
+  .omakase { width: 100%; min-height: 44px; border-style: dashed; }
   .reroll { width: 100%; margin-top: 10px; min-height: 36px; font-size: 13px; border-style: dashed; }
   .go {
     width: 100%; min-height: 56px; border: none; border-radius: 14px; background: var(--pencil);
@@ -145,6 +146,7 @@
       <!-- 答える -->
       <div id="guessArea" class="hidden" style="display:flex;flex-direction:column;gap:12px">
         <input type="text" id="answer" maxlength="30" placeholder="これは…" autocomplete="off" enterkeyhint="send">
+        <button class="tool omakase hidden" id="omakase" type="button">おまかせ（Botが決める）</button>
         <button class="go" id="submitGuess" type="button">これで答える</button>
       </div>
     </div>
@@ -152,7 +154,7 @@
 </main>
 
 <script>
-const DONE_TEXT = { draw: "✅ 描き終わりました", guess: "✅ 答えました" };
+const DONE_TEXT = { write: "✅ お題を書きました", draw: "✅ 描き終わりました", guess: "✅ 答えました" };
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const groupId = params.get("g");
@@ -205,11 +207,18 @@ function setup() {
   const isDraw = turn.task === "draw";
   $("turnInfo").textContent = `${turn.turnNo}人目 / 全${turn.total}人`;
   if (isDraw && turn.input.text) {
-    $("taskText").textContent = turn.isPrompt ? "お題はこれ。描いてください" : "前の人の答えはこれ。描いてください";
+    $("taskText").textContent = !turn.isPrompt ? "前の人の答えはこれ。描いてください"
+      : turn.promptByName ? `${turn.promptByName}さんが書いたお題。描いてください` : "お題はこれ。描いてください";
     $("promptWord").textContent = turn.input.text;
   } else if (isDraw) {
     $("taskText").textContent = "この絵を見て、同じものを描いてください";
     $("promptWord").textContent = "";
+  } else if (turn.task === "write") {
+    $("taskText").textContent = "お題を考えて書いてください。次の人がこれを描きます";
+    $("promptWord").textContent = "";
+    $("answer").placeholder = "例：満員電車";
+    $("submitGuess").textContent = "これにする";
+    $("omakase").classList.remove("hidden");
   } else {
     $("taskText").textContent = "この絵は何でしょう？";
     $("promptWord").textContent = "";
@@ -339,6 +348,20 @@ function line(a, b) {
   ctx.lineTo(b.x, b.y);
   ctx.stroke();
 }
+
+// ===== おまかせ（お題を書く番） =====
+$("omakase").onclick = async () => {
+  if (submitting) return;
+  $("omakase").disabled = true;
+  try {
+    const r = await api("suggest", {});
+    $("answer").value = r.text;
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    $("omakase").disabled = false;
+  }
+};
 
 // ===== 答える =====
 $("submitGuess").onclick = () => submit(false);

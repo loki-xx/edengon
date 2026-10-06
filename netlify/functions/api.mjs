@@ -1,7 +1,7 @@
 // LIFF画面・結果ページから呼ばれるAPI
 import {
   verifyIdToken, loadGame, saveGame, loadResult, images, finishIfLast, push, announce,
-  taskOf, nameOf, currentUserId, pickPrompt, TIME_LIMIT,
+  taskOf, nameOf, currentUserId, pickPrompt, lastEntry, TIME_LIMIT,
 } from "../../lib/game.mjs";
 
 const json = (data, status = 200) =>
@@ -46,18 +46,29 @@ export default async (req) => {
         await saveGame(game);
       }
       const remainingMs = Math.max(0, game.openedAt + TIME_LIMIT[task] * 1000 - Date.now());
-      const prev = game.chain[game.turn];
+      const prev = lastEntry(game);
       return json({
         state: "yourTurn", task, remainingMs, limitMs: TIME_LIMIT[task] * 1000, turnNo: game.turn + 1, total: game.order.length,
-        input: prev.type === "draw" ? { imageUrl: `/api/img/${prev.imageId}` } : { text: prev.text },
-        isPrompt: prev.type === "prompt",
-        canReroll: game.turn === 0 && !game.rerolled,
+        input: !prev ? {} : prev.type === "draw" ? { imageUrl: `/api/img/${prev.imageId}` } : { text: prev.text },
+        isPrompt: prev?.type === "prompt",
+        promptByName: prev?.type === "prompt" ? prev.name || null : null,
+        canReroll: game.turn === 0 && !game.writeFirst && !game.rerolled,
       });
+    }
+
+    // お題を書く番の「おまかせ」：Botのお題を1つ提案する
+    if (path === "suggest") {
+      if (game.status !== "playing" || currentUserId(game) !== userId || taskOf(game, game.turn) !== "write") {
+        return json({ error: "今はお題を書く番ではありません" }, 403);
+      }
+      const word = pickPrompt(game);
+      await saveGame(game);
+      return json({ text: word });
     }
 
     // 最初の人だけ1回：お題を交換して時間を測り直す
     if (path === "reroll") {
-      if (game.status !== "playing" || game.turn !== 0 || currentUserId(game) !== userId) {
+      if (game.status !== "playing" || game.turn !== 0 || game.writeFirst || currentUserId(game) !== userId) {
         return json({ error: "お題を変えられるのは最初の人だけです" }, 403);
       }
       if (game.rerolled) return json({ error: "お題の交換は1回だけです" }, 409);
@@ -81,6 +92,9 @@ export default async (req) => {
         if (!buf.length || buf.length > 2_000_000) return json({ error: "画像を送れませんでした" }, 400);
         entry.imageId = `${game.gameId}-${game.turn}`;
         await images().set(entry.imageId, new Blob([buf], { type: "image/jpeg" }));
+      } else if (task === "write") {
+        entry.type = "prompt";
+        entry.text = String(body.text || "").trim().slice(0, 30) || pickPrompt(game); // 空ならBotが代わりに決める
       } else {
         entry.text = String(body.text || "").trim().slice(0, 30) || "（時間切れ）";
       }
