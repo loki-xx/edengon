@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>えでんごん</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root {
+    --desk: #24485A;
+    --desk-deep: #1A3644;
+    --paper: #FFFFFF;
+    --ink: #222222;
+    --pencil: #F6C343;
+    --pencil-edge: #D9A520;
+    --eraser: #F28B9B;
+    --wood: #EBCB9F;
+    --alert: #FF6B6B;
+    --soft: #CFE0E8;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--desk);
+    color: var(--paper);
+    font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    font-weight: 500;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  main {
+    max-width: 520px; margin: 0 auto; padding: 14px 16px 20px;
+    display: flex; flex-direction: column; gap: 14px; min-height: 100%;
+  }
+  .hidden { display: none !important; }
+
+  /* お題 */
+  .meta { font-size: 13px; color: var(--soft); }
+  .task { font-size: 15px; line-height: 1.5; margin: 2px 0 0; }
+  .word { font-size: 34px; font-weight: 900; letter-spacing: .02em; line-height: 1.2; margin: 2px 0 0; word-break: break-all; }
+
+  /* 鉛筆タイマー：時間とともに鉛筆が短くなる */
+  .pencil { display: flex; align-items: center; height: 26px; }
+  .pencil .cap { width: 18px; height: 100%; background: var(--eraser); border-radius: 6px 0 0 6px; flex: none; }
+  .pencil .band { width: 8px; height: 100%; background: #C7C9CC; flex: none; }
+  .pencil .track { flex: 1; height: 100%; display: flex; align-items: center; padding-right: 26px; }
+  .pencil .body {
+    height: 100%; width: 100%;
+    background: linear-gradient(var(--pencil) 0 33%, var(--pencil-edge) 33% 36%, var(--pencil) 36% 64%, var(--pencil-edge) 64% 67%, var(--pencil) 67%);
+  }
+  .pencil .tip { width: 0; height: 0; border-top: 13px solid transparent; border-bottom: 13px solid transparent; border-left: 26px solid var(--wood); flex: none; position: relative; }
+  .pencil .tip::after { content: ""; position: absolute; left: -10px; top: -5px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 10px solid var(--ink); }
+  .pencil.low .body { background: var(--alert); }
+  .secs { font-size: 14px; color: var(--soft); text-align: right; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .pencil.low + .secs { color: var(--alert); font-weight: 700; }
+
+  /* 画用紙 */
+  .sheet { background: var(--paper); border-radius: 4px; box-shadow: 0 6px 0 var(--desk-deep); overflow: hidden; }
+  canvas { display: block; width: 100%; aspect-ratio: 1; touch-action: none; }
+  .sheet img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; }
+
+  /* 道具 */
+  .tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid transparent; padding: 0; cursor: pointer; }
+  .swatch[aria-pressed="true"] { border-color: var(--paper); transform: scale(1.12); }
+  .row { display: flex; gap: 8px; width: 100%; }
+  .tool {
+    flex: 1; min-height: 40px; border-radius: 10px; border: 2px solid var(--soft); background: transparent;
+    color: var(--paper); font: inherit; font-size: 14px; cursor: pointer;
+  }
+  .tool[aria-pressed="true"] { background: var(--paper); color: var(--desk); border-color: var(--paper); font-weight: 700; }
+
+  .reroll { width: 100%; margin-top: 10px; min-height: 36px; font-size: 13px; border-style: dashed; }
+  .go {
+    width: 100%; min-height: 56px; border: none; border-radius: 14px; background: var(--pencil);
+    color: var(--ink); font: inherit; font-size: 19px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 var(--pencil-edge);
+  }
+  .go:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--pencil-edge); }
+  .go:disabled { opacity: .5; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--eraser); outline-offset: 2px; }
+
+  input[type="text"] {
+    width: 100%; font: inherit; font-size: 22px; padding: 12px 14px; border-radius: 10px; border: none; color: var(--ink);
+  }
+
+  /* お知らせ画面 */
+  .notice { margin: auto 0; text-align: center; padding: 24px 8px; }
+  .notice h1 { font-size: 24px; font-weight: 900; margin: 0 0 10px; }
+  .notice p { margin: 0 0 22px; color: var(--soft); line-height: 1.7; }
+</style>
+</head>
+<body>
+<main>
+  <section id="loading" class="notice"><p>読み込んでいます…</p></section>
+
+  <section id="message" class="notice hidden">
+    <h1 id="msgTitle"></h1>
+    <p id="msgBody"></p>
+    <button class="go" id="closeBtn" type="button">閉じる</button>
+  </section>
+
+  <section id="play" class="hidden">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div class="meta" id="turnInfo"></div>
+        <p class="task" id="taskText"></p>
+        <p class="word" id="promptWord"></p>
+        <button class="tool reroll hidden" id="reroll" type="button">お題を変える（1回だけ・時間も測り直し）</button>
+      </div>
+      <div>
+        <div class="pencil" id="pencil" role="timer" aria-label="残り時間">
+          <div class="cap"></div><div class="band"></div>
+          <div class="track"><div class="body" id="pencilBody"></div><div class="tip"></div></div>
+        </div>
+        <div class="secs" id="secs"></div>
+      </div>
+
+      <!-- 前の人の絵（答える番・絵だけモード） -->
+      <div class="sheet hidden" id="prevSheet"><img id="prevImg" alt="前の人が描いた絵"></div>
+
+      <!-- 描く -->
+      <div id="drawArea" class="hidden" style="display:flex;flex-direction:column;gap:12px">
+        <div class="sheet"><canvas id="canvas" width="600" height="600"></canvas></div>
+        <div class="tools" id="swatches"></div>
+        <div class="row">
+          <button class="tool" data-size="4" type="button">細</button>
+          <button class="tool" data-size="10" type="button" aria-pressed="true">中</button>
+          <button class="tool" data-size="22" type="button">太</button>
+          <button class="tool" id="eraser" type="button">消しゴム</button>
+        </div>
+        <div class="row">
+          <button class="tool" id="undo" type="button">ひとつ戻す</button>
+          <button class="tool" id="clear" type="button">全部消す</button>
+        </div>
+        <button class="go" id="submitDraw" type="button">描き終わった</button>
+      </div>
+
+      <!-- 答える -->
+      <div id="guessArea" class="hidden" style="display:flex;flex-direction:column;gap:12px">
+        <input type="text" id="answer" maxlength="30" placeholder="これは…" autocomplete="off" enterkeyhint="send">
+        <button class="go" id="submitGuess" type="button">これで答える</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const DONE_TEXT = { draw: "✅ 描き終わりました", guess: "✅ 答えました" };
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const groupId = params.get("g");
+let turn = null, submitting = false, endAt = 0, timerId = 0;
+
+function show(id) {
+  ["loading", "message", "play"].forEach((s) => $(s).classList.toggle("hidden", s !== id));
+}
+function message(title, body) {
+  $("msgTitle").textContent = title;
+  $("msgBody").textContent = body;
+  show("message");
+}
+function closeApp() {
+  if (window.liff && liff.isInClient()) liff.closeWindow();
+  else message("送りました", "このページは閉じて、LINEに戻ってください。");
+}
+$("closeBtn").onclick = closeApp;
+
+async function api(path, data) {
+  const res = await fetch(`/api/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...data, g: groupId, idToken: liff.getIDToken() }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "通信に失敗しました");
+  return json;
+}
+
+async function boot() {
+  try {
+    const { liffId } = await (await fetch("/api/config")).json();
+    await liff.init({ liffId });
+    if (!liff.isLoggedIn()) return liff.login({ redirectUri: location.href });
+    if (!groupId) return message("開き方が違います", "グループLINEに出ている「描く」ボタンから開いてください。");
+
+    const t = await api("turn", {});
+    if (t.state === "notYourTurn") return message("あなたの番ではありません", `今は${t.currentName}さんの番です。順番が来たらまたボタンを押してください。`);
+    if (t.state === "notPlayer") return message("このゲームには参加していません", "次の回で「参加」と送ると遊べます。");
+    if (t.state === "notPlaying") return message("ゲームは進行していません", "グループで「開始」と送るとスタートします。");
+    turn = t;
+    setup();
+  } catch (e) {
+    message("うまく開けませんでした", e.message);
+  }
+}
+
+function setup() {
+  const isDraw = turn.task === "draw";
+  $("turnInfo").textContent = `${turn.turnNo}人目 / 全${turn.total}人`;
+  if (isDraw && turn.input.text) {
+    $("taskText").textContent = turn.isPrompt ? "お題はこれ。描いてください" : "前の人の答えはこれ。描いてください";
+    $("promptWord").textContent = turn.input.text;
+  } else if (isDraw) {
+    $("taskText").textContent = "この絵を見て、同じものを描いてください";
+    $("promptWord").textContent = "";
+  } else {
+    $("taskText").textContent = "この絵は何でしょう？";
+    $("promptWord").textContent = "";
+  }
+  if (turn.input.imageUrl) {
+    $("prevImg").src = turn.input.imageUrl;
+    $("prevSheet").classList.remove("hidden");
+  }
+  $(isDraw ? "drawArea" : "guessArea").classList.remove("hidden");
+  show("play");
+  if (isDraw) initCanvas(); else $("answer").focus();
+  if (turn.canReroll) $("reroll").classList.remove("hidden");
+  startTimer(turn.remainingMs);
+}
+
+// ===== お題交換（最初の人だけ1回） =====
+$("reroll").onclick = async () => {
+  if (submitting) return;
+  if (!confirm("お題を変えますか？描いた絵は消えて、時間は最初からになります。")) return;
+  $("reroll").disabled = true;
+  clearInterval(timerId);
+  try {
+    const r = await api("reroll", {});
+    $("promptWord").textContent = r.text;
+    clearCanvas();
+    history.length = 0;
+    $("reroll").classList.add("hidden");
+    startTimer(r.remainingMs);
+  } catch (e) {
+    $("reroll").classList.add("hidden");
+    startTimer(Math.max(0, endAt - Date.now()));
+    alert(e.message);
+  }
+};
+
+// ===== 鉛筆タイマー =====
+function startTimer(ms) {
+  const total = turn.limitMs;
+  endAt = Date.now() + ms;
+  const tick = () => {
+    const left = Math.max(0, endAt - Date.now());
+    $("pencilBody").style.width = `${(left / total) * 100}%`;
+    $("pencil").classList.toggle("low", left <= 10000);
+    $("secs").textContent = `のこり ${Math.ceil(left / 1000)} 秒`;
+    if (left <= 0) { clearInterval(timerId); submit(true); }
+  };
+  tick();
+  timerId = setInterval(tick, 200);
+}
+
+// ===== お絵かき =====
+const COLORS = ["#222222", "#E5484D", "#2F6FDB", "#2FA36B", "#F2C230", "#8B5A2B", "#F5A8C0"];
+let ctx, color = COLORS[0], size = 10, erasing = false, drawing = false, last = null;
+const history = [];
+
+function initCanvas() {
+  const canvas = $("canvas");
+  ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  COLORS.forEach((c, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "swatch";
+    b.style.background = c;
+    b.setAttribute("aria-label", `色${i + 1}`);
+    b.setAttribute("aria-pressed", i === 0);
+    b.onclick = () => {
+      color = c; erasing = false;
+      document.querySelectorAll(".swatch").forEach((s) => s.setAttribute("aria-pressed", s === b));
+      $("eraser").setAttribute("aria-pressed", false);
+    };
+    $("swatches").appendChild(b);
+  });
+  document.querySelectorAll("[data-size]").forEach((b) => {
+    b.onclick = () => {
+      size = Number(b.dataset.size);
+      document.querySelectorAll("[data-size]").forEach((s) => s.setAttribute("aria-pressed", s === b));
+    };
+  });
+  $("eraser").onclick = () => {
+    erasing = !erasing;
+    $("eraser").setAttribute("aria-pressed", erasing);
+  };
+  $("undo").onclick = () => { if (history.length) ctx.putImageData(history.pop(), 0, 0); };
+  $("clear").onclick = () => { snapshot(); clearCanvas(); };
+
+  const pos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * (canvas.width / r.width), y: (e.clientY - r.top) * (canvas.height / r.height) };
+  };
+  canvas.addEventListener("pointerdown", (e) => {
+    if (submitting) return;
+    canvas.setPointerCapture(e.pointerId);
+    snapshot();
+    drawing = true;
+    last = pos(e);
+    line(last, last);
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!drawing) return;
+    const p = pos(e);
+    line(last, p);
+    last = p;
+  });
+  const end = () => { drawing = false; };
+  canvas.addEventListener("pointerup", end);
+  canvas.addEventListener("pointercancel", end);
+  $("submitDraw").onclick = () => submit(false);
+}
+function clearCanvas() {
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, 600, 600);
+}
+function snapshot() {
+  history.push(ctx.getImageData(0, 0, 600, 600));
+  if (history.length > 25) history.shift();
+}
+function line(a, b) {
+  ctx.strokeStyle = erasing ? "#FFFFFF" : color;
+  ctx.lineWidth = erasing ? size * 2.2 : size;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+}
+
+// ===== 答える =====
+$("submitGuess").onclick = () => submit(false);
+$("answer").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) submit(false); });
+
+// ===== 送信 → トークに完了を流す → 閉じる =====
+async function submit(timeUp) {
+  if (submitting || !turn) return;
+  submitting = true;
+  clearInterval(timerId);
+  drawing = false;
+  document.querySelectorAll(".go").forEach((b) => (b.disabled = true));
+
+  const isDraw = turn.task === "draw";
+  if (!isDraw && !timeUp && !$("answer").value.trim()) {
+    submitting = false;
+    document.querySelectorAll(".go").forEach((b) => (b.disabled = false));
+    startTimer(Math.max(0, endAt - Date.now()));
+    return $("answer").focus();
+  }
+
+  try {
+    const payload = { turnNo: turn.turnNo };
+    if (isDraw) payload.image = $("canvas").toDataURL("image/jpeg", 0.82);
+    else payload.text = $("answer").value;
+    const r = await api("submit", payload);
+
+    // グループトークに「描き終わりました」を本人名義で送る → Botが返信で次の人を案内（無料）
+    let posted = false;
+    try {
+      const ctxType = liff.getContext()?.type;
+      if (liff.isInClient() && (ctxType === "group" || ctxType === "room")) {
+        await liff.sendMessages([{ type: "text", text: DONE_TEXT[turn.task] }]);
+        posted = true;
+      }
+    } catch (e) { console.warn(e); }
+    if (!posted) await api("notify", {}).catch(() => {});
+
+    message(
+      timeUp ? "時間切れ！" : "送りました",
+      r.done ? "これで全員です。グループに結果が出ます。" : `次は${r.nextName}さんの番です。`,
+    );
+    setTimeout(closeApp, 1500);
+  } catch (e) {
+    message("送れませんでした", e.message);
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

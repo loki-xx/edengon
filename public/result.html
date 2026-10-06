@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>結果 | えでんごん</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root { --desk:#24485A; --desk-deep:#1A3644; --paper:#FFFFFF; --ink:#222222; --pencil:#F6C343; --soft:#CFE0E8;
+    box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  *,*::before,*::after { box-sizing:inherit; }
+  body { margin:0; background:var(--desk); color:var(--paper);
+    font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif; font-weight:500; }
+  main { max-width:520px; margin:0 auto; padding:20px 16px 40px; }
+  .logo { font-weight:900; font-size:15px; color:var(--pencil); letter-spacing:.04em; margin:0 0 14px; }
+  h1 { font-size:24px; font-weight:900; margin:0 0 4px; }
+  .lead { color:var(--soft); margin:0 0 24px; line-height:1.6; }
+  ol { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:22px; }
+  .who { font-size:14px; color:var(--soft); margin-bottom:6px; }
+  .word { font-size:30px; font-weight:900; line-height:1.25; word-break:break-all; }
+  .prompt .word { color:var(--pencil); }
+  .sheet { background:var(--paper); border-radius:4px; box-shadow:0 6px 0 var(--desk-deep); }
+  .sheet img { display:block; width:100%; aspect-ratio:1; }
+  li + li::before { content:"↓"; display:block; text-align:center; color:var(--soft); margin:-14px 0 8px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="logo">Eden Gon'</p>
+  <h1 id="title">結果を読み込んでいます…</h1>
+  <p class="lead" id="lead"></p>
+  <ol id="chain"></ol>
+</main>
+<script>
+(async () => {
+  const id = new URLSearchParams(location.search).get("id");
+  const res = await fetch(`/api/result?id=${encodeURIComponent(id || "")}`);
+  if (!res.ok) {
+    document.getElementById("title").textContent = "結果が見つかりません";
+    document.getElementById("lead").textContent = "グループLINEの「結果を見る」ボタンから開き直してください。";
+    return;
+  }
+  const r = await res.json();
+  const first = r.chain[0].text;
+  const lastGuess = [...r.chain].reverse().find((c) => c.type === "guess");
+  document.getElementById("title").textContent = "伝言の行方";
+  document.getElementById("lead").textContent = lastGuess
+    ? (lastGuess.text === first ? "最後までちゃんと伝わりました。" : `「${first}」は「${lastGuess.text}」になりました。`)
+    : `最初のお題は「${first}」でした。`;
+  const ol = document.getElementById("chain");
+  for (const c of r.chain) {
+    const li = document.createElement("li");
+    const who = document.createElement("div");
+    who.className = "who";
+    if (c.type === "prompt") {
+      li.className = "prompt";
+      who.textContent = "最初のお題";
+    } else {
+      who.textContent = c.type === "draw" ? `${c.name}さんが描いた` : `${c.name}さんの答え`;
+    }
+    li.appendChild(who);
+    if (c.type === "draw") {
+      const s = document.createElement("div");
+      s.className = "sheet";
+      const img = document.createElement("img");
+      img.src = `/api/img/${c.imageId}`;
+      img.alt = `${c.name}さんの絵`;
+      img.loading = "lazy";
+      s.appendChild(img);
+      li.appendChild(s);
+    } else {
+      const w = document.createElement("div");
+      w.className = "word";
+      w.textContent = c.text;
+      li.appendChild(w);
+    }
+    ol.appendChild(li);
+  }
+})();
+</script>
+</body>
+</html>
